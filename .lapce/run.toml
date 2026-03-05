@@ -1,0 +1,10 @@
+[[configs]]
+type = "shell"
+name = "Agent: python tiny_llm.py --n-layers 24 --d-model 2048 --n-heads 16 --vocab-size 50257 --block-size 2048 --batch-size 1 --max-iters 5"
+program = "sh"
+args = [
+    "-c",
+    "python tiny_llm.py --n-layers 24 --d-model 2048 --n-heads 16 --vocab-size 50257 --block-size 2048 --batch-size 1 --max-iters 5",
+]
+tracing-output = false
+config-source = "Palette"
