@@ -174,7 +174,7 @@ echo -e "${YELLOW}Note: This will take several minutes depending on your connect
 echo ""
 
 # Using runpodctl send command
-runpodctl send "$POD_ID" /tmp/microcoder.tar.gz
+runpodctl send /tmp/microcoder.tar.gz "$POD_ID":/workspace/
 
 echo ""
 echo -e "${GREEN}✅ Upload complete!${NC}"
@@ -228,7 +228,7 @@ PODSCRIPT
 chmod +x /tmp/setup_pod.sh
 
 # Copy setup script to pod
-runpodctl send "$POD_ID" /tmp/setup_pod.sh
+runpodctl send /tmp/setup_pod.sh "$POD_ID":/workspace/
 
 # Execute setup script
 echo "Running setup on pod..."

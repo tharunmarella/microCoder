@@ -83,7 +83,7 @@ tar -czf microcoder.tar.gz \
     data/codesearchnet_python_metadata.json
 
 # Upload to pod
-runpodctl send <POD_ID> microcoder.tar.gz /workspace/
+runpodctl send microcoder.tar.gz <POD_ID>:/workspace/
 
 # Verify upload
 runpodctl exec <POD_ID> ls -lh /workspace/
@@ -210,11 +210,11 @@ runpodctl remove pod <POD_ID>
 ### File Operations
 ```bash
 # Upload single file
-runpodctl send <POD_ID> local_file.txt /workspace/
+runpodctl send local_file.txt <POD_ID>:/workspace/
 
 # Upload directory (must tar first)
 tar -czf data.tar.gz data/
-runpodctl send <POD_ID> data.tar.gz /workspace/
+runpodctl send data.tar.gz <POD_ID>:/workspace/
 
 # Download file
 runpodctl receive <POD_ID> /workspace/model.pt ./models/
@@ -315,7 +315,7 @@ ls -lh data/codesearchnet_python.pt
 # Upload in chunks if needed
 split -b 1G data/codesearchnet_python.pt data_part_
 for part in data_part_*; do
-    runpodctl send <POD_ID> $part /workspace/
+    runpodctl send $part <POD_ID>:/workspace/
 done
 ```
 

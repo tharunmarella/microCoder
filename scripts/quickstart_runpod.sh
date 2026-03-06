@@ -106,7 +106,7 @@ echo ""
 # Upload
 echo "📤 Uploading to pod (this may take a few minutes)..."
 echo ""
-runpodctl send "$POD_ID" /tmp/microcoder_upload.tar.gz
+runpodctl send /tmp/microcoder_upload.tar.gz "$POD_ID":/workspace/
 
 echo ""
 echo "✅ Upload complete!"

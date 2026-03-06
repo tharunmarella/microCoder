@@ -37,8 +37,8 @@ echo ""
 
 # Upload files
 echo "⬆️  UPLOAD FILES:"
-echo "  runpodctl send <POD_ID> <local_file> [remote_path]"
-echo "  runpodctl send <POD_ID> data/codesearchnet_python.pt /workspace/data/"
+echo "  runpodctl send <local_file> <POD_ID>:<remote_path>"
+echo "  runpodctl send data/codesearchnet_python.pt <POD_ID>:/workspace/data/"
 echo ""
 
 # Download files
