@@ -89,7 +89,9 @@ def prepare_hf_dataset(dataset_name, config=None, split="train", max_samples=Non
         text = (item.get('text') or 
                 item.get('code') or 
                 item.get('content') or 
-                item.get('instruction', ''))
+                item.get('instruction', '') or
+                item.get('func_code_string') or  # CodeSearchNet
+                item.get('whole_func_string', ''))  # CodeSearchNet alternative
         
         if not isinstance(text, str) or len(text) == 0:
             continue

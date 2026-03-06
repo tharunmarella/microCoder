@@ -1,0 +1,10 @@
+{
+  "dataset_name": "code_search_net",
+  "config": "python",
+  "split": "train",
+  "samples_processed": 100000,
+  "total_tokens": 46187514,
+  "total_chars": 101699936,
+  "vocab_size": 50257,
+  "tokenizer": "tiktoken_gpt2"
+}
