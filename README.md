@@ -4,7 +4,9 @@ A minimal, high-performance GPT-like LLM for **code generation**, built with mod
 
 <div align="center">
 
-**100M parameters • PyTorch • RoPE • Flash Attention • RMSNorm**
+**3B parameters • PyTorch • RoPE • Flash Attention • RMSNorm**
+
+**Production-ready code generation trained on CodeSearchNet**
 
 </div>
 
@@ -30,8 +32,9 @@ A minimal, high-performance GPT-like LLM for **code generation**, built with mod
 ### Production Features
 - **Modular Architecture** - Clean separation of concerns
 - **Preprocessed Datasets** - Load data once, train many times
-- **Multiple Model Sizes** - From 10M to 1.3B parameters
-- **MPS Support** - Optimized for Apple Silicon (M1/M2/M3/M4)
+- **Multiple Model Sizes** - From 100M to 13B parameters (configurable)
+- **Cloud Training Ready** - Optimized RunPod scripts for A100 GPUs
+- **Apple Silicon Support** - MPS backend for M-series Macs (local dev/testing)
 - **Comprehensive Logging** - Track training progress
 
 ---
@@ -69,24 +72,46 @@ git clone <repository-url>
 cd microCoder
 
 # Install dependencies
-pip install torch tiktoken datasets
-
-# Optional: For YAML config loading
-pip install pyyaml
+pip install -r requirements.txt
+# OR manually:
+pip install torch tiktoken datasets pyyaml tqdm
 ```
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Prepare Dataset (One-time)
+### Option A: Train on RunPod (Recommended for Production)
+
+**Best for:** Training the full 3B model for production-quality results
 
 ```bash
-# Prepare Python code dataset
+# 1. Set up RunPod instance (see docs/RUNPOD_SETUP.md)
+# 2. Upload project and dataset
+# 3. Run training script
+./scripts/train_3b_runpod.sh
+
+# Cost: ~$9 for 15 hours on A100 80GB (Spot)
+# Quality: ⭐⭐⭐⭐⭐ Production-ready code generation
+```
+
+📖 **[Full RunPod Setup Guide →](docs/RUNPOD_SETUP.md)**
+
+---
+
+### Option B: Local Training (Mac/CUDA)
+
+**Best for:** Development, testing, small models (100M-350M)
+
+#### 1. Prepare Dataset (One-time)
+
+```bash
+# Download CodeSearchNet Python dataset
 python scripts/prepare_data.py \
     --source hf \
-    --dataset flytech/python-codes-25k \
-    --output data/python_codes_25k.pt
+    --dataset code_search_net \
+    --language python \
+    --output data/codesearchnet_python.pt
 ```
 
 **Other datasets:**
@@ -106,11 +131,11 @@ python scripts/prepare_data.py \
 
 ### 2. Train a Model
 
-**100M parameter model** (recommended for M1/M2/M3/M4 Macs):
+**100M parameter model** (local development on Mac M4):
 ```bash
 python src/train.py \
     --data-source preprocessed \
-    --data-file data/python_codes_25k.pt \
+    --data-file data/codesearchnet_python.pt \
     --device mps \
     --n-layers 10 \
     --d-model 768 \
@@ -122,17 +147,17 @@ python src/train.py \
     --save-path models/checkpoints/model_100m.pt
 ```
 
-**For NVIDIA GPUs:**
+**For NVIDIA GPUs** (local testing):
 ```bash
 python src/train.py \
     --data-source preprocessed \
-    --data-file data/python_codes_25k.pt \
+    --data-file data/codesearchnet_python.pt \
     --device cuda \
     --n-layers 10 \
     --d-model 768 \
     --n-heads 12 \
     --block-size 512 \
-    --batch-size 8 \
+    --batch-size 16 \
     --amp \
     --iterations 5000 \
     --scheduler \
@@ -211,23 +236,51 @@ Input → RMSNorm → Multi-Head Attention (with RoPE) → Add & Norm
 
 ---
 
+## 📈 Model Configurations
+
+### Available Sizes
+
+| Size | Params | Layers | d_model | Heads | Context | Use Case | Cost (A100 80GB) |
+|------|--------|--------|---------|-------|---------|----------|------------------|
+| **Tiny** | 10M | 6 | 384 | 6 | 512 | Testing, development | Local/Free |
+| **Small** | 100M | 10 | 768 | 12 | 512 | Local experiments | Local/Free |
+| **Medium** | 350M | 12 | 1024 | 16 | 1024 | Small-scale deployment | $2-4 |
+| **Large** | 1.3B | 24 | 2048 | 16 | 2048 | Production (basic) | $4-6 |
+| **3B** ⭐ | 3B | 32 | 2560 | 32 | 2048 | **Production (recommended)** | **$9-11** |
+| **7B** | 7B | 36 | 4096 | 32 | 2048 | High-quality generation | $18-24 |
+| **13B** | 13B | 48 | 5120 | 40 | 2048 | State-of-the-art | $36-48 |
+
+⭐ **3B is the sweet spot**: Best quality-to-cost ratio for production code generation
+
+---
+
 ## 📈 Performance Tips
 
 ### For Mac M1/M2/M3/M4:
 - Use `--device mps` for Apple Silicon acceleration
-- Start with the "small" config (100M params)
+- **Recommended**: 100M model (Small config) for local development
 - Use `--batch-size 6-8` for optimal memory usage
 - Don't use `--amp` (MPS handles precision automatically)
+- **Not recommended** for training 1B+ models (use RunPod instead)
 
-### For NVIDIA GPUs:
+### For NVIDIA GPUs (Local):
 - Use `--device cuda` and `--amp` for 2x speedup
 - Increase `--batch-size` if you have more VRAM
 - Use `--grad-accum-steps` to simulate larger batches
+- **Good for**: 100M-1.3B models
+
+### For Production Training (RunPod/Cloud):
+- **3B model**: A100 80GB, ~15 hours, ~$9
+- **7B model**: A100 80GB, ~24 hours, ~$18
+- **13B model**: 2× A100 80GB + DeepSpeed, ~30 hours, ~$36
+- Always use **Spot instances** for 60-80% cost savings
+- Enable `--amp` for mixed precision training
 
 ### For Training Speed:
 - Preprocess datasets once with `prepare_data.py`
-- Use `--scheduler` for better convergence
+- Use `--scheduler` with `--warmup-ratio 0.03` for better convergence
 - Enable `--amp` on CUDA for faster training
+- Use `--grad-accum-steps` to maximize GPU utilization
 
 ---
 

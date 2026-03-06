@@ -34,24 +34,56 @@ medium:
   batch_size: 4
   lr: 2e-4
 
-# Large Model (~800M parameters) - Requires ~32GB VRAM
+# Large Model (~1.3B parameters) - Requires ~48GB VRAM
 large:
-  vocab_size: 50257
-  block_size: 1024
-  n_layers: 16
-  d_model: 1536
-  n_heads: 16
-  dropout: 0.1
-  batch_size: 2
-  lr: 1.5e-4
-
-# XL Model (~1.3B parameters) - Requires ~48GB VRAM
-xl:
   vocab_size: 50257
   block_size: 2048
   n_layers: 24
   d_model: 2048
   n_heads: 16
   dropout: 0.1
+  batch_size: 2
+  lr: 1.5e-4
+
+# 3B Model (~3B parameters) - RECOMMENDED for production (A100 80GB)
+3b:
+  vocab_size: 50257
+  block_size: 2048
+  n_layers: 32
+  d_model: 2560
+  n_heads: 32
+  dropout: 0.1
+  batch_size: 2
+  lr: 1.5e-4
+  grad_accum_steps: 8
+  warmup_ratio: 0.03
+  min_lr_ratio: 0.1
+
+# 7B Model (~7B parameters) - High quality (A100 80GB)
+7b:
+  vocab_size: 50257
+  block_size: 2048
+  n_layers: 36
+  d_model: 4096
+  n_heads: 32
+  dropout: 0.1
+  batch_size: 1
+  lr: 1.2e-4
+  grad_accum_steps: 16
+  warmup_ratio: 0.03
+  min_lr_ratio: 0.1
+
+# 13B Model (~13B parameters) - State-of-the-art (requires 2× A100 80GB)
+13b:
+  vocab_size: 50257
+  block_size: 2048
+  n_layers: 48
+  d_model: 5120
+  n_heads: 40
+  dropout: 0.1
   batch_size: 1
   lr: 1e-4
+  grad_accum_steps: 32
+  warmup_ratio: 0.03
+  min_lr_ratio: 0.1
+

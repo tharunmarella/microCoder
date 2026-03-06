@@ -61,3 +61,6 @@ data/*.pth
 
 # Misc
 .prototools
+
+# But DO track requirements.txt
+!requirements.txt
