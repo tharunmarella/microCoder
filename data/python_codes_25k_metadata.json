@@ -1,0 +1,10 @@
+{
+  "dataset_name": "flytech/python-codes-25k",
+  "config": null,
+  "split": "train",
+  "samples_processed": 49626,
+  "total_tokens": 8104928,
+  "total_chars": 24304020,
+  "vocab_size": 50257,
+  "tokenizer": "tiktoken_gpt2"
+}

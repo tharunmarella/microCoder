@@ -1,0 +1,57 @@
+# Model Configurations
+# Each preset defines a model size with optimized hyperparameters
+
+# Tiny Model (~10M parameters) - For quick testing
+tiny:
+  vocab_size: 50257
+  block_size: 256
+  n_layers: 6
+  d_model: 384
+  n_heads: 6
+  dropout: 0.1
+  batch_size: 16
+  lr: 5e-4
+
+# Small Model (~100M parameters) - Good for M1/M2/M3/M4 Macs
+small:
+  vocab_size: 50257
+  block_size: 512
+  n_layers: 10
+  d_model: 768
+  n_heads: 12
+  dropout: 0.1
+  batch_size: 8
+  lr: 3e-4
+
+# Medium Model (~350M parameters) - Requires ~16GB VRAM
+medium:
+  vocab_size: 50257
+  block_size: 1024
+  n_layers: 12
+  d_model: 1024
+  n_heads: 16
+  dropout: 0.1
+  batch_size: 4
+  lr: 2e-4
+
+# Large Model (~800M parameters) - Requires ~32GB VRAM
+large:
+  vocab_size: 50257
+  block_size: 1024
+  n_layers: 16
+  d_model: 1536
+  n_heads: 16
+  dropout: 0.1
+  batch_size: 2
+  lr: 1.5e-4
+
+# XL Model (~1.3B parameters) - Requires ~48GB VRAM
+xl:
+  vocab_size: 50257
+  block_size: 2048
+  n_layers: 24
+  d_model: 2048
+  n_heads: 16
+  dropout: 0.1
+  batch_size: 1
+  lr: 1e-4
