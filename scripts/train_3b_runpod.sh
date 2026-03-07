@@ -13,11 +13,17 @@ echo "   Hidden dim: 2560"
 echo "   Attention heads: 32"
 echo "   Context length: 2048 tokens"
 echo ""
+echo "🎯 Training Features:"
+echo "   ✅ Automatic checkpoints every 500 iterations"
+echo "   ✅ Early stopping when loss plateaus"
+echo "   ✅ Best model auto-saved"
+echo "   ✅ TensorBoard real-time monitoring"
+echo ""
 echo "💰 Cost Estimate:"
 echo "   GPU: A100 80GB (Spot)"
 echo "   Rate: $0.60/hr"
-echo "   Time: 15-18 hours"
-echo "   Total: $9-11"
+echo "   Time: 6-15 hours (early stop may reduce this!)"
+echo "   Total: $4-11 (likely $4-6 with early stopping)"
 echo ""
 echo "⚡ Starting training..."
 echo ""
@@ -47,7 +53,7 @@ mkdir -p models/checkpoints
 mkdir -p logs
 mkdir -p logs/tensorboard
 
-# Start training with optimized 3B configuration
+# Start training with optimized 3B configuration + early stopping
 python src/train.py \
   --data-source preprocessed \
   --data-file data/codesearchnet_python.pt \
@@ -70,6 +76,11 @@ python src/train.py \
   --dropout 0.1 \
   --tensorboard \
   --save-path models/checkpoints/codesearchnet_3b.pt \
+  --checkpoint-interval 500 \
+  --early-stopping \
+  --patience 10 \
+  --early-stop-patience 5 \
+  --min-delta 0.01 \
   --log-interval 100 \
   --sample-interval 1000 \
   --prompt "def binary_search(arr, target):" \

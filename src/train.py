@@ -7,6 +7,7 @@ import math
 import random
 import json
 import sys
+import os
 
 # Optional: Tiktoken for BPE
 try:
@@ -454,6 +455,11 @@ def train(args):
     # Data loader
     loader = DataLoader(data, args.block_size, args.batch_size, device)
     
+    # Early stopping variables
+    best_loss = float('inf')
+    patience_counter = 0
+    loss_history = []
+    
     # Training loop
     model.train()
     start_time = time.time()
@@ -511,6 +517,9 @@ def train(args):
             
             print(f"Iter {it+1:5d}/{args.iterations} | Loss: {loss.item():.4f} | PPL: {perplexity:.2f} | LR: {current_lr:.2e} | {tokens_seen / elapsed:,.0f} tok/s")
             
+            # Track loss for early stopping
+            loss_history.append(loss.item())
+            
             # TensorBoard logging
             if writer is not None:
                 writer.add_scalar('train/loss', loss.item(), it + 1)
@@ -525,6 +534,78 @@ def train(args):
                         total_norm += p.grad.data.norm(2).item() ** 2
                 total_norm = total_norm ** 0.5
                 writer.add_scalar('train/grad_norm', total_norm, it + 1)
+        
+        # Early stopping check (every checkpoint interval)
+        if args.early_stopping and (it + 1) % args.checkpoint_interval == 0 and len(loss_history) >= args.patience:
+            # Calculate average loss over last 'patience' intervals
+            recent_avg_loss = sum(loss_history[-args.patience:]) / args.patience
+            
+            # Check if loss improved
+            if recent_avg_loss < best_loss - args.min_delta:
+                best_loss = recent_avg_loss
+                patience_counter = 0
+                
+                # Save best checkpoint
+                if args.save_path:
+                    checkpoint_dir = os.path.dirname(args.save_path) or 'models/checkpoints'
+                    os.makedirs(checkpoint_dir, exist_ok=True)
+                    best_checkpoint_path = os.path.join(checkpoint_dir, f'best_checkpoint_iter{it+1}.pt')
+                    
+                    torch.save({
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict(),
+                        'scheduler_state_dict': scheduler.state_dict() if scheduler else None,
+                        'iteration': it + 1,
+                        'loss': recent_avg_loss,
+                        'config': {
+                            'vocab_size': args.vocab_size,
+                            'block_size': args.block_size,
+                            'n_layers': args.n_layers,
+                            'd_model': args.d_model,
+                            'n_heads': args.n_heads,
+                            'dropout': args.dropout,
+                        },
+                        'total_params': total_params,
+                    }, best_checkpoint_path)
+                    print(f"\n✅ Best checkpoint saved: {best_checkpoint_path} (Loss: {recent_avg_loss:.4f})\n")
+            else:
+                patience_counter += 1
+                print(f"📊 No improvement | Patience: {patience_counter}/{args.early_stop_patience} | Best Loss: {best_loss:.4f}")
+                
+                # Check if we should stop
+                if patience_counter >= args.early_stop_patience:
+                    print("\n" + "="*70)
+                    print("🛑 EARLY STOPPING TRIGGERED")
+                    print("="*70)
+                    print(f"Training stopped at iteration {it+1}/{args.iterations}")
+                    print(f"Best loss: {best_loss:.4f}")
+                    print(f"No improvement for {args.early_stop_patience * args.checkpoint_interval} iterations")
+                    print("="*70 + "\n")
+                    break
+        
+        # Periodic checkpoint saving (regardless of early stopping)
+        if args.save_path and (it + 1) % args.checkpoint_interval == 0:
+            checkpoint_dir = os.path.dirname(args.save_path) or 'models/checkpoints'
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            periodic_checkpoint_path = os.path.join(checkpoint_dir, f'checkpoint_iter{it+1}.pt')
+            
+            torch.save({
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict() if scheduler else None,
+                'iteration': it + 1,
+                'loss': loss.item(),
+                'config': {
+                    'vocab_size': args.vocab_size,
+                    'block_size': args.block_size,
+                    'n_layers': args.n_layers,
+                    'd_model': args.d_model,
+                    'n_heads': args.n_heads,
+                    'dropout': args.dropout,
+                },
+                'total_params': total_params,
+            }, periodic_checkpoint_path)
+            print(f"💾 Checkpoint saved: {periodic_checkpoint_path}")
         
         # Generate sample
         if (it + 1) % args.sample_interval == 0 and args.sample_interval > 0:
@@ -606,6 +687,13 @@ def main():
     parser.add_argument('--sample-interval', type=int, default=500, help='Generate sample every N iterations')
     parser.add_argument('--prompt', type=str, default="def ", help='Prompt for final generation')
     parser.add_argument('--generate-len', type=int, default=256, help='Length of generated text')
+    
+    # Checkpointing and early stopping
+    parser.add_argument('--checkpoint-interval', type=int, default=500, help='Save checkpoint every N iterations')
+    parser.add_argument('--early-stopping', action='store_true', help='Enable early stopping based on loss plateau')
+    parser.add_argument('--patience', type=int, default=10, help='Number of checkpoint intervals to track for early stopping')
+    parser.add_argument('--early-stop-patience', type=int, default=5, help='Stop after N consecutive non-improving checkpoints')
+    parser.add_argument('--min-delta', type=float, default=0.01, help='Minimum loss improvement to reset patience counter')
     
     # System
     parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda', 'mps'], help='Device to use')
