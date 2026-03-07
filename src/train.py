@@ -545,7 +545,7 @@ def train(args):
                 best_loss = recent_avg_loss
                 patience_counter = 0
                 
-                # Save best checkpoint
+                # Save best checkpoint (model only, no optimizer to save disk space)
                 if args.save_path:
                     checkpoint_dir = os.path.dirname(args.save_path) or 'models/checkpoints'
                     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -553,8 +553,6 @@ def train(args):
                     
                     torch.save({
                         'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict(),
-                        'scheduler_state_dict': scheduler.state_dict() if scheduler else None,
                         'iteration': it + 1,
                         'loss': recent_avg_loss,
                         'config': {
@@ -582,30 +580,6 @@ def train(args):
                     print(f"No improvement for {args.early_stop_patience * args.checkpoint_interval} iterations")
                     print("="*70 + "\n")
                     break
-        
-        # Periodic checkpoint saving (regardless of early stopping)
-        if args.save_path and (it + 1) % args.checkpoint_interval == 0:
-            checkpoint_dir = os.path.dirname(args.save_path) or 'models/checkpoints'
-            os.makedirs(checkpoint_dir, exist_ok=True)
-            periodic_checkpoint_path = os.path.join(checkpoint_dir, f'checkpoint_iter{it+1}.pt')
-            
-            torch.save({
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'scheduler_state_dict': scheduler.state_dict() if scheduler else None,
-                'iteration': it + 1,
-                'loss': loss.item(),
-                'config': {
-                    'vocab_size': args.vocab_size,
-                    'block_size': args.block_size,
-                    'n_layers': args.n_layers,
-                    'd_model': args.d_model,
-                    'n_heads': args.n_heads,
-                    'dropout': args.dropout,
-                },
-                'total_params': total_params,
-            }, periodic_checkpoint_path)
-            print(f"💾 Checkpoint saved: {periodic_checkpoint_path}")
         
         # Generate sample
         if (it + 1) % args.sample_interval == 0 and args.sample_interval > 0:
