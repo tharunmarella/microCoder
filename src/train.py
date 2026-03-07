@@ -23,6 +23,14 @@ except Exception:
     HF_AVAILABLE = False
     load_dataset = None
 
+# Optional: TensorBoard for visualization
+try:
+    from torch.utils.tensorboard import SummaryWriter
+    TENSORBOARD_AVAILABLE = True
+except Exception:
+    TENSORBOARD_AVAILABLE = False
+    SummaryWriter = None
+
 # 1) GLOBAL CONFIG (aiming for ~100M params)
 # Default vocabulary size: 50257 for tiktoken (GPT-2 BPE), falls back to 256 for byte-level
 vocab_size = 50257
@@ -343,6 +351,16 @@ def train(args):
         device = torch.device('cpu')
     print(f"Using device: {device}")
     
+    # Initialize TensorBoard if available and enabled
+    writer = None
+    if args.tensorboard and TENSORBOARD_AVAILABLE:
+        log_dir = f"logs/tensorboard/run_{time.strftime('%Y%m%d_%H%M%S')}"
+        writer = SummaryWriter(log_dir)
+        print(f"📊 TensorBoard logging to: {log_dir}")
+        print(f"   View with: tensorboard --logdir logs/tensorboard")
+    elif args.tensorboard and not TENSORBOARD_AVAILABLE:
+        print("⚠️  TensorBoard requested but not installed. Install with: pip install tensorboard")
+    
     check_memory(args, device)
     
     # Build model
@@ -488,7 +506,25 @@ def train(args):
         if (it + 1) % args.log_interval == 0:
             elapsed = time.time() - start_time
             tokens_seen = (it + 1) * args.batch_size * args.block_size
-            print(f"Iter {it+1:5d}/{args.iterations} | Loss: {loss.item():.4f} | lr: {optimizer.param_groups[0]['lr']:.2e} | {tokens_seen / elapsed:,.0f} tok/s")
+            current_lr = optimizer.param_groups[0]['lr']
+            perplexity = math.exp(min(loss.item(), 20))  # Cap to avoid overflow
+            
+            print(f"Iter {it+1:5d}/{args.iterations} | Loss: {loss.item():.4f} | PPL: {perplexity:.2f} | LR: {current_lr:.2e} | {tokens_seen / elapsed:,.0f} tok/s")
+            
+            # TensorBoard logging
+            if writer is not None:
+                writer.add_scalar('train/loss', loss.item(), it + 1)
+                writer.add_scalar('train/perplexity', perplexity, it + 1)
+                writer.add_scalar('train/learning_rate', current_lr, it + 1)
+                writer.add_scalar('train/tokens_per_sec', tokens_seen / elapsed, it + 1)
+                
+                # Log gradient norms
+                total_norm = 0.0
+                for p in model.parameters():
+                    if p.grad is not None:
+                        total_norm += p.grad.data.norm(2).item() ** 2
+                total_norm = total_norm ** 0.5
+                writer.add_scalar('train/grad_norm', total_norm, it + 1)
         
         # Generate sample
         if (it + 1) % args.sample_interval == 0 and args.sample_interval > 0:
@@ -497,7 +533,17 @@ def train(args):
             print(f"\n--- Sample after iter {it+1} ---")
             print(sample[:256] + ("..." if len(sample) > 256 else ""))
             print("---\n")
+            
+            # Log sample to TensorBoard
+            if writer is not None:
+                writer.add_text('samples/generated', sample[:512], it + 1)
+            
             model.train()
+    
+    # Close TensorBoard writer
+    if writer is not None:
+        writer.close()
+        print("📊 TensorBoard logs saved")
     
     # Final generation
     print("\n" + "="*50)
@@ -565,6 +611,7 @@ def main():
     parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda', 'mps'], help='Device to use')
     parser.add_argument('--print-model', action='store_true', help='Print model architecture')
     parser.add_argument('--save-path', type=str, default='', help='Path to save model checkpoint')
+    parser.add_argument('--tensorboard', action='store_true', help='Enable TensorBoard logging')
     
     args = parser.parse_args()
     

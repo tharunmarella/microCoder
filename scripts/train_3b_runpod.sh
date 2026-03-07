@@ -45,6 +45,7 @@ echo ""
 # Create output directory
 mkdir -p models/checkpoints
 mkdir -p logs
+mkdir -p logs/tensorboard
 
 # Start training with optimized 3B configuration
 python src/train.py \
@@ -67,6 +68,7 @@ python src/train.py \
   --max-grad-norm 1.0 \
   --weight-decay 0.1 \
   --dropout 0.1 \
+  --tensorboard \
   --save-path models/checkpoints/codesearchnet_3b.pt \
   --log-interval 100 \
   --sample-interval 1000 \
@@ -80,8 +82,10 @@ echo "=================================================="
 echo ""
 echo "📦 Model saved to: models/checkpoints/codesearchnet_3b.pt"
 echo "📋 Training log: logs/training_3b.log"
+echo "📊 TensorBoard logs: logs/tensorboard/"
 echo ""
 echo "🎯 Next Steps:"
 echo "   1. Download the model checkpoint"
-echo "   2. Test with: python src/generate.py models/checkpoints/codesearchnet_3b.pt 'your prompt'"
+echo "   2. View training metrics: tensorboard --logdir logs/tensorboard"
+echo "   3. Test with: python src/generate.py models/checkpoints/codesearchnet_3b.pt 'your prompt'"
 echo ""
