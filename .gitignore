@@ -61,6 +61,16 @@ data/*.pth
 
 # Misc
 .prototools
+*.bak
+*.tmp
+*_old.*
+*_backup.*
+._*
+
+# Temporary scripts
+open_tensorboard.sh
+training_session_info.txt
+TRAINING_SUMMARY.md
 
 # But DO track requirements.txt
 !requirements.txt
