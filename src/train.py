@@ -6,8 +6,8 @@ import time
 import math
 import random
 import json
-import sys
 import os
+import shutil
 
 # Optional: Tiktoken for BPE
 try:
@@ -549,8 +549,13 @@ def train(args):
                 if args.save_path:
                     checkpoint_dir = os.path.dirname(args.save_path) or 'models/checkpoints'
                     os.makedirs(checkpoint_dir, exist_ok=True)
-                    best_checkpoint_path = os.path.join(checkpoint_dir, f'best_checkpoint_iter{it+1}.pt')
                     
+                    # 1. Save to fast local NVMe storage first
+                    tmp_checkpoint_path = f'/tmp/best_model_tmp.pt'
+                    # 2. Final destination on network volume
+                    best_checkpoint_path = os.path.join(checkpoint_dir, 'best_model.pt')
+                    
+                    print(f"💾 Saving checkpoint to local storage first...")
                     torch.save({
                         'model_state_dict': model.state_dict(),
                         'iteration': it + 1,
@@ -564,7 +569,12 @@ def train(args):
                             'dropout': args.dropout,
                         },
                         'total_params': total_params,
-                    }, best_checkpoint_path)
+                    }, tmp_checkpoint_path)
+                    
+                    # 3. Move from local NVMe to network volume safely
+                    print(f"🚚 Moving checkpoint to network volume...")
+                    shutil.move(tmp_checkpoint_path, best_checkpoint_path)
+                    
                     print(f"\n✅ Best checkpoint saved: {best_checkpoint_path} (Loss: {recent_avg_loss:.4f})\n")
             else:
                 patience_counter += 1
@@ -610,6 +620,13 @@ def train(args):
     
     # Save model if requested
     if args.save_path:
+        checkpoint_dir = os.path.dirname(args.save_path) or 'models/checkpoints'
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        
+        # 1. Save to fast local NVMe storage first
+        tmp_final_path = f'/tmp/final_model_tmp.pt'
+        
+        print(f"💾 Saving final model to local storage first...")
         torch.save({
             'model_state_dict': model.state_dict(),
             'config': {
@@ -621,8 +638,13 @@ def train(args):
                 'dropout': args.dropout,
             },
             'total_params': total_params,
-        }, args.save_path)
-        print(f"Model saved to {args.save_path}")
+        }, tmp_final_path)
+        
+        # 2. Move from local NVMe to network volume safely
+        print(f"🚚 Moving final model to network volume...")
+        shutil.move(tmp_final_path, args.save_path)
+        
+        print(f"✅ Model saved to {args.save_path}")
 
 def main():
     parser = argparse.ArgumentParser(description='Train a ~100M parameter GPT-like model on text data.')
